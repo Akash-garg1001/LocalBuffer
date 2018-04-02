@@ -1,0 +1,410 @@
+#pragma once
+
+#include <shared/LocalBuffer.hpp>
+#include <byteswap.h>
+#include <shared/LocalBuffer.hpp>
+#include <algorithm>
+#include <boost/lexical_cast.hpp>
+
+
+
+/*
+namespace amt{
+
+inline void encode(LocalBuffer& buffer, int size, void* val){
+	char * p = (char*)val;
+	for(int i = 0 ; i < size ; ++i, p++){
+		buffer.put8(*p);
+	}
+}
+
+inline void decode(LocalBuffer& buffer, int size, void* val){
+	char * result = (char*)val;
+	for(int i = 0 ; i < size ; ++i){
+		//little endian
+		if(!buffer.get8(result[i])){
+			throw std::runtime_error("decode() - Premature end of stream while decoding.");
+		}
+	}
+}
+
+inline void decode(LocalBuffer& buffer, int size, double* val){
+	long long v = 0;
+	decode(buffer, size, &v);
+
+	// If in we have some price multiplication factor
+	//double f = ((double) v)/100000000.0;
+	double f = ((double) v)/1.0;
+	*val = f;
+}
+
+inline void decode(LocalBuffer& buffer, int size, float* val){
+	long long v = 0;
+	decode(buffer, size, &v);
+
+	// If in we have some price multiplication factor
+	//double f = ((double) v)/100000000.0;
+	double f = ((double) v)/1.0;
+	*val = (float)f;
+}
+
+inline void decode(LocalBuffer& buffer, int size, std::string* val){
+	val->clear();
+	char b[] = { 0 ,0 };
+	for(int i = 0 ; i < size ; ++i){
+		//little endian
+		if(!buffer.get8(b[0])){
+			throw std::runtime_error("decode() - Premature end of stream while decoding.");
+		}
+		val->append((char*)b);
+	}
+}
+
+
+
+}
+
+
+*/
+
+
+
+namespace amt{
+
+inline void encode(LocalBuffer& buffer, int size, void* val){
+        char * p = (char*)val;
+        for(int i = 0 ; i < size ; ++i, p++){
+                buffer.put8(*p);
+        }
+}
+
+inline void decode(LocalBuffer& buffer, int size, void* val){
+        char * result = (char*)val;
+        for(int i = 0 ; i < size ; ++i){
+                //little endian
+                if(!buffer.get8(result[i])){
+                        throw std::runtime_error("decode() - Premature end of stream while decoding.");
+                }
+        }
+}
+
+inline void decode(LocalBuffer& buffer, int size, double* val){
+        long long v = 0;
+        decode(buffer, size, &v);
+
+        // If in we have some price multiplication factor
+        //double f = ((double) v)/100000000.0;
+        double f = ((double) v)/1.0;
+        *val = f;
+}
+
+inline void decode(LocalBuffer& buffer, int size, float* val){
+        long long v = 0;
+        decode(buffer, size, &v);
+
+        // If in we have some price multiplication factor
+        //double f = ((double) v)/100000000.0;
+        double f = ((double) v)/1.0;
+        *val = (float)f;
+}
+
+inline void decode(LocalBuffer& buffer, int size, std::string* val){
+        val->clear();
+        char b[] = { 0 ,0 };
+        for(int i = 0 ; i < size ; ++i){
+                //little endian
+                if(!buffer.get8(b[0])){
+                        throw std::runtime_error("decode() - Premature end of stream while decoding.");
+                }
+                val->append((char*)b);
+        }
+}
+
+//*****************************
+
+
+
+
+union{
+        double _doubleNum;
+        long long _num;
+        unsigned char _bytes[sizeof(long long)];
+}siztyFourBitField;
+
+
+template <typename T>
+T twindle(T val){
+        return val;
+}
+
+template<>
+inline int16_t twindle<int16_t>(int16_t val){
+        return bswap_16(val);
+}
+template<>
+inline uint16_t twindle<uint16_t>(uint16_t val){
+        return bswap_16(val);
+}
+
+template<>
+inline int32_t twindle<int32_t>(int32_t val){
+        return bswap_32(val);
+}
+template<>
+inline uint32_t twindle<uint32_t>(uint32_t val){
+        return bswap_32(val);
+}
+
+template<>
+inline int64_t twindle<int64_t>(int64_t val){
+        std::array<std::pair<std::string, char>, 8> hexBytesArray;
+        siztyFourBitField._num = val;
+        std::stringstream ss;
+        for( size_t k = 0; k < sizeof(int64_t); k++ ){
+                ss << std::setw(2) << std::setfill('0') << std::right << std::hex << (unsigned int)(siztyFourBitField._bytes[k]);
+                hexBytesArray[k] = std::make_pair(ss.str(), siztyFourBitField._bytes[k]);
+                ss.str("");
+                ss.clear();
+        }
+        std::reverse(hexBytesArray.begin(), hexBytesArray.end());
+        for( size_t k = 0; k < sizeof(int64_t); k++ ){
+                siztyFourBitField._bytes[k] = hexBytesArray[k].second;
+        }
+        return siztyFourBitField._num;
+}
+template<>
+inline uint64_t twindle<uint64_t>(uint64_t val){
+        std::array<std::pair<std::string, char>, 8> hexBytesArray;
+        siztyFourBitField._num = val;
+        std::stringstream ss;
+        for( size_t k = 0; k < sizeof(int64_t); k++ ){
+                ss << std::setw(2) << std::setfill('0') << std::right << std::hex << (unsigned int)(siztyFourBitField._bytes[k]);
+                hexBytesArray[k] = std::make_pair(ss.str(), siztyFourBitField._bytes[k]);
+                ss.str("");
+                ss.clear();
+        }
+        std::reverse(hexBytesArray.begin(), hexBytesArray.end());
+        for( size_t k = 0; k < sizeof(int64_t); k++ ){
+                siztyFourBitField._bytes[k] = hexBytesArray[k].second;
+        }
+        return siztyFourBitField._num;
+}
+
+template<>
+inline double twindle<double>(double val){
+        std::array<std::pair<std::string, char>, 8> hexBytesArray;
+        siztyFourBitField._num = 0;
+        siztyFourBitField._doubleNum = val;
+        std::stringstream ss;
+        for( size_t k = 0; k < sizeof(int64_t); k++ ){
+                ss << std::setw(2) << std::setfill('0') << std::right << std::hex << (unsigned int)(siztyFourBitField._bytes[k]);
+                hexBytesArray[k] = std::make_pair(ss.str(), siztyFourBitField._bytes[k]);
+                ss.str("");
+                ss.clear();
+        }
+        std::reverse(hexBytesArray.begin(), hexBytesArray.end());
+        for( size_t k = 0; k < sizeof(int64_t); k++ ){
+                siztyFourBitField._bytes[k] = hexBytesArray[k].second;
+        }
+        return siztyFourBitField._doubleNum;
+}
+
+template<>
+inline long long twindle<long long>(long long val){
+        std::array<std::pair<std::string, char>, 8> hexBytesArray;
+        siztyFourBitField._num = val;
+        std::stringstream ss;
+        for( size_t k = 0; k < sizeof(int64_t); k++ ){
+                ss << std::setw(2) << std::setfill('0') << std::right << std::hex << (unsigned int)(siztyFourBitField._bytes[k]);
+                hexBytesArray[k] = std::make_pair(ss.str(), siztyFourBitField._bytes[k]);
+                ss.str("");
+                ss.clear();
+        }
+        std::reverse(hexBytesArray.begin(), hexBytesArray.end());
+        for( size_t k = 0; k < sizeof(int64_t); k++ ){
+                siztyFourBitField._bytes[k] = hexBytesArray[k].second;
+        }
+        return siztyFourBitField._num;
+}
+
+template <typename T>
+inline void nnfEncode(LocalBuffer& buffer, int size, T* val, bool convertCase = true){
+        // Change byte order as well
+        char * p = (char*)val;
+        for(int i = 0 ; i < size ; ++i, p++){
+                if(convertCase && islower(*p)){
+                        *p = toupper(*p);
+                }
+                buffer.put8(*p);
+        }
+}
+template <>
+inline void nnfEncode<int16_t>(LocalBuffer& buffer, int size, int16_t* val, bool convertCase){
+        // Change byte order as well
+        char * p = (char*)val;
+        for(int i = size-1 ; i >= 0 ; --i){
+                buffer.put8(*(p+i));
+        }
+}
+template <>
+inline void nnfEncode<uint16_t>(LocalBuffer& buffer, int size, uint16_t* val, bool convertCase){
+        char * p = (char*)val;
+        for(int i = size-1 ; i >= 0 ; --i){
+                buffer.put8(*(p+i));
+        }
+}
+template <>
+inline void nnfEncode<int32_t>(LocalBuffer& buffer, int size, int32_t* val, bool convertCase){
+        char * p = (char*)val;
+        for(int i = size-1 ; i >= 0 ; --i){
+                buffer.put8(*(p+i));
+        }
+}
+template <>
+inline void nnfEncode<uint32_t>(LocalBuffer& buffer, int size, uint32_t* val, bool convertCase){
+        char * p = (char*)val;
+        for(int i = size-1 ; i >= 0 ; --i){
+                buffer.put8(*(p+i));
+        }
+}
+template <>
+inline void nnfEncode<int64_t>(LocalBuffer& buffer, int size, int64_t* val, bool convertCase){
+        char * p = (char*)val;
+        for(int i = size-1 ; i >= 0 ; --i){
+                buffer.put8(*(p+i));
+        }
+}
+template <>
+inline void nnfEncode<uint64_t>(LocalBuffer& buffer, int size, uint64_t* val, bool convertCase){
+        char * p = (char*)val;
+        for(int i = size-1 ; i >= 0 ; --i){
+                buffer.put8(*(p+i));
+        }
+}
+template <>
+inline void nnfEncode<double>(LocalBuffer& buffer, int size, double* val, bool convertCase){
+        char * p = (char*)val;
+        for(int i = size-1 ; i >= 0 ; --i){
+                buffer.put8(*(p+i));
+        }
+}
+
+template <typename T>
+inline void nnfDecode(LocalBuffer& buffer, int size, T* val, bool convertCase = true){
+        char * result = (char*)val;
+        for(int i = 0 ; i < size ; ++i){
+                //little endian
+                if(!buffer.get8(result[i])){
+                        throw std::runtime_error("nnfDecode() - Premature end of stream while decoding.");
+                }
+        }
+}
+template<>
+inline void nnfDecode<int16_t>(LocalBuffer& buffer, int size, int16_t* val, bool convertCase){
+        //*val = twindle(*val);
+        char * result = (char*)val;
+        for(int i = 0 ; i < size ; ++i){
+                //little endian
+                if(!buffer.get8(result[i])){
+                        throw std::runtime_error("nnfDecode() - Premature end of stream while decoding.");
+                }
+        }
+        *val = twindle(*val);
+}
+template<>
+inline void nnfDecode<uint16_t>(LocalBuffer& buffer, int size, uint16_t* val, bool convertCase){
+        //*val = twindle(*val);
+        char * result = (char*)val;
+        for(int i = 0 ; i < size ; ++i){
+                //little endian
+                if(!buffer.get8(result[i])){
+                        throw std::runtime_error("nnfDecode() - Premature end of stream while decoding.");
+                }
+        }
+        *val = twindle(*val);
+}
+template<>
+inline void nnfDecode<int32_t>(LocalBuffer& buffer, int size, int32_t* val, bool convertCase){
+        //*val = twindle(*val);
+        char * result = (char*)val;
+        for(int i = 0 ; i < size ; ++i){
+                //little endian
+                if(!buffer.get8(result[i])){
+                        throw std::runtime_error("nnfDecode() - Premature end of stream while decoding.");
+                }
+        }
+        *val = twindle(*val);
+}
+template<>
+inline void nnfDecode<uint32_t>(LocalBuffer& buffer, int size, uint32_t* val, bool convertCase){
+        //*val = twindle(*val);
+        char * result = (char*)val;
+        for(int i = 0 ; i < size ; ++i){
+                //little endian
+                if(!buffer.get8(result[i])){
+                        throw std::runtime_error("nnfDecode() - Premature end of stream while decoding.");
+                }
+        }
+        *val = twindle(*val);
+}
+template<>
+inline void nnfDecode<int64_t>(LocalBuffer& buffer, int size, int64_t* val, bool convertCase){
+        //*val = twindle(*val);
+        char * result = (char*)val;
+        for(int i = 0 ; i < size ; ++i){
+                //little endian
+                if(!buffer.get8(result[i])){
+                        throw std::runtime_error("nnfDecode() - Premature end of stream while decoding.");
+                }
+        }
+        *val = twindle(*val);
+}
+template<>
+inline void nnfDecode<uint64_t>(LocalBuffer& buffer, int size, uint64_t* val, bool convertCase){
+        //*val = twindle(*val);
+        char * result = (char*)val;
+        for(int i = 0 ; i < size ; ++i){
+                //little endian
+                if(!buffer.get8(result[i])){
+                        throw std::runtime_error("nnfDecode() - Premature end of stream while decoding.");
+                }
+        }
+        *val = twindle(*val);
+}
+
+template<>
+inline void nnfDecode<double>(LocalBuffer& buffer, int size, double* val, bool convertCase){
+        char * result = (char*)val;
+        for(int i = 0 ; i < size ; ++i){
+                //little endian
+                if(!buffer.get8(result[i])){
+                        throw std::runtime_error("nnfDecode() - Premature end of stream while decoding.");
+                }
+        }
+        *val = twindle(*val);
+}
+template<>
+inline void nnfDecode<float>(LocalBuffer& buffer, int size, float* val, bool convertCase){
+        int64_t v = 0;
+        nnfDecode(buffer, size, &v);
+        //v = twindle(v);
+
+        //double tmp = ByteOrderConverter::convertByteOrder(v, ByteOrderConverter::BIGENDIAN);
+        double f = ((double) v)/1.0; // If in we have some price multiplication factor - currently using 1.0
+        *val = (float)f;
+}
+template<>
+inline void nnfDecode<std::string>(LocalBuffer& buffer, int size, std::string* val, bool convertCase){
+        val->clear();
+        char b[] = { 0 ,0 };
+        for(int i = 0 ; i < size ; ++i){
+                //little endian
+                if(!buffer.get8(b[0])){
+                        throw std::runtime_error("nnfDecode() - Premature end of stream while decoding.");
+                }
+                val->append((char*)b);
+        }
+}
+
+}
+

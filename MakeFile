@@ -1,0 +1,64 @@
+BOOST_BASE=$(BOOST_INSTALL_ROOT)
+AMT_UTIL_SHARED_BASE=$(AMT_UTIL_SHARED_ROOT)
+AMT_UTIL_TRANSPORT_TCP_CLIENT_BASE=${AMT_UTIL_TRANSPORT_TCP_CLIENT_ROOT}
+AMT_UTIL_TRANSPORT_TCP_SERVER_BASE=${AMT_UTIL_TRANSPORT_RAW_TCP_SERVER_ROOT}
+AMT_PS_MESSAGES_BASE=${AMT_PS_MESSAGES_ROOT}
+
+PROTOBUFF_BASE= ${AMT_PROTOBUF_ROOT}
+PROTO_MSG_BASE= ${AMT_PROTOBUF_MESSAGE_ROOT}
+POSTGRESQL_BASE= ${POSTGRESQL_ROOT}
+
+
+
+CXX=/usr/bin/g++
+CXXFLAGS= -fPIC -g -O0 -std=c++11 -Wall $(INCS)
+
+BINARY=../bin/TrimmedPck
+
+SRCS= \
+	MessageHandler.cpp \
+	MsgConvertor.cpp \
+	CSVParser.cpp \
+
+
+MAIN_SRC= TrimmedPck.cpp
+OBJS = $(patsubst %.cpp, %.o , $(SRCS))
+MAIN_OBJ = $(patsubst %.cpp, %.o , $(MAIN_SRC))
+
+INCS=	\
+	-I ../include	\
+	-I $(BOOST_BASE)/include	\
+	-I${AMT_UTIL_SHARED_BASE}/include \
+	-I${AMT_UTIL_TRANSPORT_TCP_SERVER_BASE}/include \
+	-I${AMT_UTIL_TRANSPORT_TCP_CLIENT_BASE}/include \
+	-I $(AMT_UTIL_SHARED_BASE)/include	\
+	-I${AMT_PS_MESSAGES_BASE}/include \
+	-I$(PROTO_MSG_BASE)/include \
+	-I$(PROTOB	UFF_BASE)/include \
+	-I${LIBPGXX_ROOT}/include \
+	-I${POSTGRESQL_BASE}/include \
+	
+
+LIBS= \
+	-L$(AMT_UTIL_SHARED_BASE)/lib -lShared	\
+	-L${AMT_UTIL_TRANSPORT_TCP_SERVER_BASE}/lib -lRawTcpServer \
+	-L${AMT_UTIL_TRANSPORT_TCP_CLIENT_BASE}/lib -lTcpClient \
+	-L${AMT_PS_MESSAGES_BASE}/lib -lMessages \
+	-L$(PROTOBUFF_BASE)/lib -lprotobuf \
+    -L$(PROTO_MSG_BASE)/lib -lMessagesProto \
+	-L$(BOOST_BASE)/lib -lboost_thread	\
+	-L$(BOOST_BASE)/lib -lboost_system	\
+	-L$(BOOST_BASE)/lib -lboost_chrono	\
+	-L$(BOOST_BASE)/lib -lboost_date_time	\
+	-L$(BOOST_BASE)/lib -lboost_regex	\
+	-L${LIBPGXX_ROOT}/lib -lpqxx \
+    -L${POSTGRESQL_ROOT}/lib -lpq \
+	-lpthread \
+
+
+all: $(BINARY)
+$(BINARY) : $(OBJS) $(MAIN_OBJ)
+	$(CXX) -o $(BINARY) $(OBJS) $(MAIN_OBJ) $(LIBS) $(INCS)
+
+clean:
+	rm -rf $(OBJS)  $(MAIN_OBJ) $(BINARY)
